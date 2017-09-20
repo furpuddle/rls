@@ -18,7 +18,7 @@ use config::Config;
 use server::{self, Request, Notification, LsService, NoParams};
 use vfs::Vfs;
 
-use ls_types::{ClientCapabilities, TextDocumentPositionParams, TextDocumentIdentifier, TraceOption, Position, InitializeParams, RenameParams};
+use ls_types::{ClientCapabilities, TextDocumentPositionParams, TextDocumentIdentifier, TraceOption, Position, InitializeParams, RenameParams, DocumentSymbolParams};
 
 use std::fmt;
 use std::io::{stdin, stdout, Write};
@@ -80,6 +80,10 @@ pub fn run() {
                 let col = bits.next().expect("Expected column number");
                 hover(file_name, row, col).to_string()
             }
+            "symbols" => {
+                let file_name = bits.next().expect("Expected file name");
+                symbols(file_name).to_string()
+            }
             "h" | "help" => {
                 help();
                 continue;
@@ -134,6 +138,17 @@ fn hover<'a>(file_name: &str, row: &str, col: &str) -> Request<'a, requests::Hov
         text_document: TextDocumentIdentifier::new(url(file_name)),
         position: Position::new(u64::from_str(row).expect("Bad line number"),
                                 u64::from_str(col).expect("Bad column number")),
+    };
+    Request {
+        id: next_id(),
+        params,
+        _action: PhantomData,
+    }
+}
+
+fn symbols<'a>(file_name: &str) -> Request<'a, requests::Symbols> {
+    let params = DocumentSymbolParams {
+        text_document: TextDocumentIdentifier::new(url(file_name)),
     };
     Request {
         id: next_id(),
@@ -255,15 +270,20 @@ fn help() {
     println!("    help    display this message");
     println!("    quit    exit");
     println!("");
-    println!("    def     file_name line_number column_number");
-    println!("            textDocument/definition");
-    println!("            used for 'goto def'");
+    println!("    def         file_name line_number column_number");
+    println!("                textDocument/definition");
+    println!("                used for 'goto def'");
     println!("");
-    println!("    rename  file_name line_number column_number new_name");
-    println!("            textDocument/rename");
-    println!("            used for 'rename'");
+    println!("    rename      file_name line_number column_number new_name");
+    println!("                textDocument/rename");
+    println!("                used for 'rename'");
     println!("");
-    println!("    hover   file_name line_number column_number");
-    println!("            textDocument/hover");
-    println!("            used for 'hover'");
+    println!("    hover       file_name line_number column_number");
+    println!("                textDocument/hover");
+    println!("                used for 'hover'");
+    println!("");
+    println!("    symbols     file_name");
+    println!("                textDocument/symbols");
+    println!("                used for 'symbols'");
+
 }
