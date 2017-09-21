@@ -91,6 +91,12 @@ pub fn run() {
                 let include_declaration = bits.next().expect("Expected 'include declaration' flag");
                 references(file_name, row, col, include_declaration).to_string()
             }
+            "findimpls" => {
+                let file_name = bits.next().expect("Expected file name");
+                let row = bits.next().expect("Expected line number");
+                let col = bits.next().expect("Expected column number");
+                findimpls(file_name, row, col).to_string()
+            }
             "h" | "help" => {
                 help();
                 continue;
@@ -141,6 +147,19 @@ fn rename<'a>(file_name: &str, row: &str, col: &str, new_name: &str) -> Request<
 }
 
 fn hover<'a>(file_name: &str, row: &str, col: &str) -> Request<'a, requests::Hover> {
+    let params = TextDocumentPositionParams {
+        text_document: TextDocumentIdentifier::new(url(file_name)),
+        position: Position::new(u64::from_str(row).expect("Bad line number"),
+                                u64::from_str(col).expect("Bad column number")),
+    };
+    Request {
+        id: next_id(),
+        params,
+        _action: PhantomData,
+    }
+}
+
+fn findimpls<'a>(file_name: &str, row: &str, col: &str) -> Request<'a, requests::FindImpls> {
     let params = TextDocumentPositionParams {
         text_document: TextDocumentIdentifier::new(url(file_name)),
         position: Position::new(u64::from_str(row).expect("Bad line number"),
@@ -312,4 +331,8 @@ fn help() {
     println!("    references  file_name line_number column_number include_declaration");
     println!("                textDocument/references");
     println!("                used for 'references'");
+    println!("");
+    println!("    findimpls   file_name line_number column_number");
+    println!("                textDocument/findimpls");
+    println!("                used for 'findimpls'");
 }
