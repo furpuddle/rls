@@ -18,7 +18,7 @@ use config::Config;
 use server::{self, Request, Notification, LsService, NoParams};
 use vfs::Vfs;
 
-use ls_types::{ClientCapabilities, TextDocumentPositionParams, TextDocumentIdentifier, TraceOption, Position, InitializeParams, RenameParams, DocumentSymbolParams, ReferenceParams, ReferenceContext};
+use ls_types::{ClientCapabilities, TextDocumentPositionParams, TextDocumentIdentifier, TraceOption, Position, InitializeParams, RenameParams, DocumentSymbolParams, ReferenceParams, ReferenceContext, Location, Range};
 
 use std::fmt;
 use std::io::{stdin, stdout, Write};
@@ -108,6 +108,14 @@ pub fn run() {
                 let row = bits.next().expect("Expected line number");
                 let col = bits.next().expect("Expected column number");
                 highlight(file_name, row, col).to_string()
+            }
+            "deglob" => {
+                let file_name = bits.next().expect("Expected file name");
+                let start_row = bits.next().expect("Expected starting line number");
+                let start_col = bits.next().expect("Expected starting column number");
+                let end_row = bits.next().expect("Expected ending line number");
+                let end_col = bits.next().expect("Expected ending column number");
+                deglob(file_name, start_row, start_col, end_row, end_col).to_string()
             }
             "h" | "help" => {
                 help();
@@ -229,6 +237,23 @@ fn highlight<'a>(file_name: &str, row: &str, col: &str) -> Request<'a, requests:
         text_document: TextDocumentIdentifier::new(url(file_name)),
         position: Position::new(u64::from_str(row).expect("Bad line number"),
                                 u64::from_str(col).expect("Bad column number")),
+    };
+    Request {
+        id: next_id(),
+        params,
+        _action: PhantomData,
+    }
+}
+
+fn deglob<'a>(file_name: &str, start_row: &str, start_col: &str, end_row: &str, end_col: &str) -> Request<'a, requests::Deglob> {
+    let params = Location {
+        uri: url(file_name),
+        range: Range {
+                start: Position::new(u64::from_str(start_row).expect("Bad starting line number"),
+                                     u64::from_str(start_col).expect("Bad starting column number")),
+                end: Position::new(u64::from_str(end_row).expect("Bad ending line number"),
+                                   u64::from_str(end_col).expect("Bad ending column number"))
+        },
     };
     Request {
         id: next_id(),
@@ -381,4 +406,8 @@ fn help() {
     println!("    highlight   file_name line_number column_number");
     println!("                textDocument/documentHighlight");
     println!("                used for 'documentHighlight'");
+    println!("");
+    println!("    deglob      file_name start_line_number start_column_number end_line_number end_column_number");
+    println!("                textDocument/deglob");
+    println!("                used for 'deglob'");
 }
