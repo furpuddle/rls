@@ -103,6 +103,12 @@ pub fn run() {
                 let col = bits.next().expect("Expected column number");
                 completion(file_name, row, col).to_string()
             }
+            "highlight" => {
+                let file_name = bits.next().expect("Expected file name");
+                let row = bits.next().expect("Expected line number");
+                let col = bits.next().expect("Expected column number");
+                highlight(file_name, row, col).to_string()
+            }
             "h" | "help" => {
                 help();
                 continue;
@@ -206,6 +212,19 @@ fn references<'a>(file_name: &str, row: &str, col: &str, include_declaration: &s
 }
 
 fn completion<'a>(file_name: &str, row: &str, col: &str) -> Request<'a, requests::Completion> {
+    let params = TextDocumentPositionParams {
+        text_document: TextDocumentIdentifier::new(url(file_name)),
+        position: Position::new(u64::from_str(row).expect("Bad line number"),
+                                u64::from_str(col).expect("Bad column number")),
+    };
+    Request {
+        id: next_id(),
+        params,
+        _action: PhantomData,
+    }
+}
+
+fn highlight<'a>(file_name: &str, row: &str, col: &str) -> Request<'a, requests::DocumentHighlight> {
     let params = TextDocumentPositionParams {
         text_document: TextDocumentIdentifier::new(url(file_name)),
         position: Position::new(u64::from_str(row).expect("Bad line number"),
@@ -358,4 +377,8 @@ fn help() {
     println!("    completion  file_name line_number column_number");
     println!("                textDocument/completion");
     println!("                used for 'completion'");
+    println!("");
+    println!("    highlight   file_name line_number column_number");
+    println!("                textDocument/documentHighlight");
+    println!("                used for 'documentHighlight'");
 }
