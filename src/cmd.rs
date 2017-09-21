@@ -97,6 +97,12 @@ pub fn run() {
                 let col = bits.next().expect("Expected column number");
                 findimpls(file_name, row, col).to_string()
             }
+            "completion" => {
+                let file_name = bits.next().expect("Expected file name");
+                let row = bits.next().expect("Expected line number");
+                let col = bits.next().expect("Expected column number");
+                completion(file_name, row, col).to_string()
+            }
             "h" | "help" => {
                 help();
                 continue;
@@ -191,6 +197,19 @@ fn references<'a>(file_name: &str, row: &str, col: &str, include_declaration: &s
         context: ReferenceContext { 
             include_declaration: bool::from_str(include_declaration).expect("Bad 'include declaration' flag value"),
         },
+    };
+    Request {
+        id: next_id(),
+        params,
+        _action: PhantomData,
+    }
+}
+
+fn completion<'a>(file_name: &str, row: &str, col: &str) -> Request<'a, requests::Completion> {
+    let params = TextDocumentPositionParams {
+        text_document: TextDocumentIdentifier::new(url(file_name)),
+        position: Position::new(u64::from_str(row).expect("Bad line number"),
+                                u64::from_str(col).expect("Bad column number")),
     };
     Request {
         id: next_id(),
@@ -335,4 +354,8 @@ fn help() {
     println!("    findimpls   file_name line_number column_number");
     println!("                textDocument/findimpls");
     println!("                used for 'findimpls'");
+    println!("");
+    println!("    completion  file_name line_number column_number");
+    println!("                textDocument/completion");
+    println!("                used for 'completion'");
 }
