@@ -18,7 +18,7 @@ use config::Config;
 use server::{self, Request, Notification, LsService, NoParams};
 use vfs::Vfs;
 
-use ls_types::{ClientCapabilities, TextDocumentPositionParams, TextDocumentIdentifier, TraceOption, Position, InitializeParams, RenameParams, DocumentSymbolParams};
+use ls_types::{ClientCapabilities, TextDocumentPositionParams, TextDocumentIdentifier, TraceOption, Position, InitializeParams, RenameParams, DocumentSymbolParams, ReferenceParams, ReferenceContext};
 
 use std::fmt;
 use std::io::{stdin, stdout, Write};
@@ -83,6 +83,13 @@ pub fn run() {
             "symbols" => {
                 let file_name = bits.next().expect("Expected file name");
                 symbols(file_name).to_string()
+            }
+            "references" => {
+                let file_name = bits.next().expect("Expected file name");
+                let row = bits.next().expect("Expected line number");
+                let col = bits.next().expect("Expected column number");
+                let include_declaration = bits.next().expect("Expected 'include declaration' flag");
+                references(file_name, row, col, include_declaration).to_string()
             }
             "h" | "help" => {
                 help();
@@ -149,6 +156,22 @@ fn hover<'a>(file_name: &str, row: &str, col: &str) -> Request<'a, requests::Hov
 fn symbols<'a>(file_name: &str) -> Request<'a, requests::Symbols> {
     let params = DocumentSymbolParams {
         text_document: TextDocumentIdentifier::new(url(file_name)),
+    };
+    Request {
+        id: next_id(),
+        params,
+        _action: PhantomData,
+    }
+}
+
+fn references<'a>(file_name: &str, row: &str, col: &str, include_declaration: &str) -> Request<'a, requests::References> {
+    let params = ReferenceParams {
+        text_document: TextDocumentIdentifier::new(url(file_name)),
+        position: Position::new(u64::from_str(row).expect("Bad line number"),
+                                u64::from_str(col).expect("Bad column number")),
+        context: ReferenceContext { 
+            include_declaration: bool::from_str(include_declaration).expect("Bad 'include declaration' flag value"),
+        },
     };
     Request {
         id: next_id(),
@@ -285,5 +308,8 @@ fn help() {
     println!("    symbols     file_name");
     println!("                textDocument/symbols");
     println!("                used for 'symbols'");
-
+    println!("");
+    println!("    references  file_name line_number column_number include_declaration");
+    println!("                textDocument/references");
+    println!("                used for 'references'");
 }
