@@ -18,7 +18,9 @@ use config::Config;
 use server::{self, Request, Notification, LsService, NoParams};
 use vfs::Vfs;
 
-use ls_types::{ClientCapabilities, TextDocumentPositionParams, TextDocumentIdentifier, TraceOption, Position, InitializeParams, RenameParams, DocumentSymbolParams, ReferenceParams, ReferenceContext, Location, Range};
+use ls_types::{ClientCapabilities, TextDocumentPositionParams, TextDocumentIdentifier, TraceOption, Position, InitializeParams, RenameParams, DocumentSymbolParams, ReferenceParams, ReferenceContext, Location, Range, ExecuteCommandParams};
+
+use serde_json::Value;
 
 use std::fmt;
 use std::io::{stdin, stdout, Write};
@@ -116,6 +118,12 @@ pub fn run() {
                 let end_row = bits.next().expect("Expected ending line number");
                 let end_col = bits.next().expect("Expected ending column number");
                 deglob(file_name, start_row, start_col, end_row, end_col).to_string()
+            }
+            "execute" => {
+                let command = bits.next().expect("Expected command");
+                let arguments:Vec<Value> = bits.map(|arg| arg.parse().unwrap())
+                                               .collect();
+                execute(command, arguments).to_string()
             }
             "h" | "help" => {
                 help();
@@ -254,6 +262,18 @@ fn deglob<'a>(file_name: &str, start_row: &str, start_col: &str, end_row: &str, 
                 end: Position::new(u64::from_str(end_row).expect("Bad ending line number"),
                                    u64::from_str(end_col).expect("Bad ending column number"))
         },
+    };
+    Request {
+        id: next_id(),
+        params,
+        _action: PhantomData,
+    }
+}
+
+fn execute<'a>(command: &str, arguments: Vec<Value>) -> Request<'a, requests::ExecuteCommand> {
+    let params = ExecuteCommandParams {
+        command: command.to_string(),
+        arguments: arguments,
     };
     Request {
         id: next_id(),
@@ -410,4 +430,8 @@ fn help() {
     println!("    deglob      file_name start_line_number start_column_number end_line_number end_column_number");
     println!("                textDocument/deglob");
     println!("                used for 'deglob'");
+    println!("");
+    println!("    execute     command args...");
+    println!("                textDocument/executeCommand");
+    println!("                used for 'executeCommand'");
 }
